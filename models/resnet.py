@@ -201,12 +201,13 @@ class ResNet_sequence(ResNetBase):
         out = self.blocks_normed(x)
         # Combine masking and multiplying by the denominator for
         # an average of the sequence outputs
-        mask = torch.zeros_like(out)
+        mask = torch.zeros_like(out, requires_grad=False)
         for i in range(mask.shape[0]):
             mask[i, :, : lens[i]] = (
                 1 / lens[i]
             )  # Sets the mask to 1/len for 0...len and 0 otherwise
         out = mask * out
+        del mask  # try not to leak memory
         out = out.sum(dim=-1, keepdim=True)
         # Pass through final projection layer, squeeze & return
         out = self.out_layer(out)

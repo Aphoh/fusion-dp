@@ -95,20 +95,14 @@ def main(
     if cfg.pretrained.load:
         # Construct artifact path.
         checkpoint_path = (
-            hydra.utils.get_original_cwd() + f"/artifacts/{cfg.pretrained.filename}"
+            hydra.utils.get_original_cwd()
+            + f"/artifacts/{cfg.pretrained.filename}/model.ckpt"
         )
 
         # Load model from artifact
-        print(
-            f'IGNORE this validation run. Required due to problem with Lightning model loading \n {"#" * 200}'
-        )
-        trainer.validate(model, datamodule=datamodule)
-        print("#" * 200)
         checkpoint_path += "/model.ckpt"
         model = model.__class__.load_from_checkpoint(
-            checkpoint_path,
-            network=model.network,
-            cfg=cfg,
+            checkpoint_path, network=model.network, cfg=cfg, map_location=cfg.device
         )
 
     # Test before training

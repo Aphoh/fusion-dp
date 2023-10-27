@@ -10,6 +10,7 @@ from pytorch_lightning.callbacks import Callback
 import sys
 from . import plotting
 import traceback
+import matplotlib.pyplot as plt
 
 # project
 from optim import construct_optimizer, construct_scheduler
@@ -216,19 +217,20 @@ class ClassificationWrapper(LightningWrapperBase):
         x, labels, lens = self._preprocess_batch(batch)
         logits = self.forward(x, lens)
 
-        # Probabilities
-        probabilities = self.get_probabilities(logits, lens)
+        with torch.no_grad():
+            # Probabilities
+            probabilities = self.get_probabilities(logits, lens)
 
-        # Calculate metrics
-        for name, metric in metrics_dict.items():
-            # We don't want to compute roc on every step, since
-            # we only log it per epoch
-            if name == "roc":
-                metric.update(probabilities, labels.round().int())
-            elif not compute_metrics:
-                metric.update(probabilities, labels)
-            else:
-                metric(probabilities, labels)
+            # Calculate metrics
+            for name, metric in metrics_dict.items():
+                # We don't want to compute roc on every step, since
+                # we only log it per epoch
+                if name == "roc":
+                    metric.update(probabilities, labels.round().int())
+                elif not compute_metrics:
+                    metric.update(probabilities, labels)
+                else:
+                    metric(probabilities, labels)
 
         # For binary classification, the labels must be float
         if not self.multiclass:
@@ -261,13 +263,13 @@ class ClassificationWrapper(LightningWrapperBase):
             reg_loss = 0.0
         # Log metrics
         kwargs = {"on_step": True, "on_epoch": True, "sync_dist": self.distributed}
-        self.log("train/loss", loss, prog_bar=True, **kwargs)
+        self.log("train/loss", loss.detach(), prog_bar=True, **kwargs)
         self._log_metrics("train", self.train_metrics, **kwargs)
         # Store loss and logits for on_train_epoch_end
         if self.seq_out:  # we do this to save memory, not sure the impact
             logits = torch.mean(logits, dim=-1)
         self.train_step_outputs.append(
-            {"loss": loss + reg_loss, "logits": logits.detach()}
+            {"loss": (loss + reg_loss).detach(), "logits": logits.detach()}
         )
         # Do I still need the logits in this?
         return {"loss": loss + reg_loss, "logits": logits.detach()}
@@ -301,6 +303,7 @@ class ClassificationWrapper(LightningWrapperBase):
                 ).cpu()
                 fig = plotting.plot_disruption_predictions(out, batch, dpcfg)
                 self.logger.experiment.log({"val/disruptivity_plot": wandb.Image(fig)})
+                plt.close(fig)
 
             return logits
 
@@ -317,6 +320,7 @@ class ClassificationWrapper(LightningWrapperBase):
             sync_dist=self.distributed,
         )
 
+    @torch.no_grad()
     def on_train_epoch_end(self):
         flattened_logits = torch.flatten(
             torch.cat(
@@ -344,9 +348,11 @@ class ClassificationWrapper(LightningWrapperBase):
 
         fig, _ = self.train_metrics["roc"].plot()
         self.logger.experiment.log({"train/roc": fig})
+        plt.close(fig)
 
         self.train_step_outputs.clear()
 
+    @torch.no_grad()
     def on_validation_epoch_end(self):
         # Gather logits from validation set and construct a histogram of them.
         flattened_logits = torch.flatten(
@@ -374,12 +380,14 @@ class ClassificationWrapper(LightningWrapperBase):
 
         fig, _ = self.val_metrics["roc"].plot()
         self.logger.experiment.log({"val/roc": fig})
+        plt.close(fig)
 
         self.validation_step_outputs.clear()
 
     def on_test_epoch_end(self):
         fig, _ = self.test_metrics["roc"].plot()
         self.logger.experiment.log({"test/roc": fig})
+        plt.close(fig)
 
     # This has a *args to ignore lengths if they get passed
     @staticmethod

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_disruption_predictions(out: torch.Tensor, batch, cfg):
+def plot_disruption_predictions(out: torch.Tensor, batch, cfg=None, ax=None):
     """Generates a matplotlib plot of disruptino predictions from a batch of network
     outputs. The plot is end-aligned so that many disruptions can be observed being
     signalled at once.
@@ -14,8 +14,10 @@ def plot_disruption_predictions(out: torch.Tensor, batch, cfg):
         cfg: the hydra disruption plotting config
     """
     _, labels, lens = batch
-    fig, ax = plt.subplots()
-    n_plot = min(out.shape[0], cfg.max_plots)
+    fig = None
+    if ax is None:
+        fig, ax = plt.subplots()
+    n_plot = min(out.shape[0], cfg.max_plots if cfg else 200)
     for s_idx in range(n_plot):
         s_len = lens[s_idx]
         end = out.shape[-1]
