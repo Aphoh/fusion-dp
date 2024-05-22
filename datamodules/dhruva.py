@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from typing import Optional
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
@@ -14,6 +15,17 @@ def collate_fn(batch):
     inputs = torch.nn.utils.rnn.pad_sequence(inputs, batch_first=True).transpose(1, 2)
     labels = torch.tensor(labels)
     return inputs, labels, lengths
+
+def resample_array(arr, C):
+    seq_length = (arr.shape[0] // C) * C
+    arr = arr[:seq_length]
+    seq_length, dim = arr.shape
+    if seq_length % C != 0:
+        raise ValueError("seq_length must be divisible by C")
+    
+    reshaped = arr.reshape(seq_length // C, C, dim)
+    resampled = np.repeat(reshaped[:, :1, :], C, axis=1)
+    return resampled.reshape(seq_length, dim)
 
 
 class DhruvaDataModule(pl.LightningDataModule):
@@ -71,6 +83,12 @@ class DhruvaDataModule(pl.LightningDataModule):
         assert Path(self.file_path).exists(), f"File {self.file_path} does not exist."
         with open(self.file_path, "rb") as f:
             shots = pickle.load(f)
+        for key in shots.keys():
+            for shot in shots[key].values():
+                if shot["machine"] == "east":
+                    shot["data"] = resample_array(shot["data"], 20)
+                elif shot["machine"] == "d3d":
+                    shot["data"] = resample_array(shot["data"], 5)
 
         
         self.train_dataset = lucas_processing.ModelReadyDataset(
