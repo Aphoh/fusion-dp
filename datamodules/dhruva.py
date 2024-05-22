@@ -24,8 +24,9 @@ class DhruvaDataModule(pl.LightningDataModule):
     # TODO: add sample rate here
     def __init__(
         self,
-        file_path: str,
+        data_dir: str,
         pin_memory: bool,
+        file_path: str = "none",
         data_type: str = "default",
         end_cutoff_timesteps=8,
         machine_hyperparameters: dict = {"cmod": 1.0, "d3d": 1.0, "east": 1.0},
@@ -59,7 +60,7 @@ class DhruvaDataModule(pl.LightningDataModule):
         self.data_dim = 1
         self.data_type = "sequence"
 
-        self.input_channels = 13
+        self.input_channels = 12
         self.output_channels = 1
 
         if end_cutoff_timesteps is None:

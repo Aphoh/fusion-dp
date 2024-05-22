@@ -65,10 +65,10 @@ conv:
 dataset:
   name: 'Lucas'
   data_dir: 'data/'
-  file_path: "none"
   data_type: 'sequence'
   augment: True
   params:
+    file_path: "none"
     end_cutoff_timesteps: 8 # Used for Lucas' dataset
     new_machine: east
     case_number: 8
