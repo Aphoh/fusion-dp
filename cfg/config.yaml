@@ -65,6 +65,7 @@ conv:
 dataset:
   name: 'Lucas'
   data_dir: 'data/'
+  file_path: "none"
   data_type: 'sequence'
   augment: True
   params:

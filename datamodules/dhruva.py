@@ -31,7 +31,6 @@ class DhruvaDataModule(pl.LightningDataModule):
         machine_hyperparameters: dict = {"cmod": 1.0, "d3d": 1.0, "east": 1.0},
         batch_size: int = 32,
         test_batch_size: int = 32,
-        generator: Optional[Generator] = None,
         num_workers: int = 1,
         augment: bool = False,
         debug: bool = False,
@@ -47,7 +46,6 @@ class DhruvaDataModule(pl.LightningDataModule):
         self.machine_hyperparameters = machine_hyperparameters
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
-        self.generator = generator
         self.num_workers = num_workers
         self.augment = augment
         self.len_aug_args = len_aug_args
